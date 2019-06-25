@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/context
+http://www.springframework.org/schema/context/spring-context.xsd
+http://www.springframework.org/schema/aop
+http://www.springframework.org/schema/aop/spring-aop.xsd
+http://www.springframework.org/schema/tx
+http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+    <!-- 扫描com.mfs 及其所有子包下类-->
+    <context:component-scan base-package="com.mfs" />
+    <!-- 加载properties 配置文件-->
+    <context:property-placeholder location="classpath:db.properties" />
+    <aop:aspectj-autoproxy /><!-- aop -->
+    <!-- 配置数据源-->
+    <!-- 配置c3p0 数据源 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driver}"></property>
+        <property name="jdbcUrl" value="${jdbc.url}"></property>
+        <property name="user" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+    </bean>
+    <!-- 配置事务管理器-->
+    <bean id="txManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <!-- 设置事物增强-->
+    <tx:advice id="txAdvice" transaction-manager="txManager">
+        <tx:attributes>
+            <tx:method name="get*" read-only="true" />
+            <tx:method name="find*" read-only="true" />
+            <tx:method name="query*" read-only="true" />
+            <tx:method name="load*" read-only="true" />
+            <tx:method name="add*" propagation="REQUIRED" />
+            <tx:method name="insert*" propagation="REQUIRED" />
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED" />
+        </tx:attributes>
+    </tx:advice>
+    <!-- aop 切面配置-->
+    <aop:config>
+        <aop:pointcut id="servicePointcut" expression="execution(* com.mfs.service..*.*(..))" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="servicePointcut"/>
+    </aop:config>
+    <!-- 配置sqlSessionFactory-->
+    <bean id="sqlSessionFactory"
+          class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+        <property name="configLocation" value="classpath:mybatis.xml" />
+        <!--
+        自动扫描com/mfs/mapper 目录下的所有SQL 映射的xml 文
+        件, 省掉mybatis.xml 里的手工配置
+        value="classpath:com/mfs/mapper/*.xml"指的是classpath(类路径)
+        下com.mfs.crm.mapper 包中的所有xml 文件
+        UserMapper.xml 位于com.mfs.mapper 包下，这样UserMapper.xml 就可
+        以被自动扫描
+        -->
+        <property name="mapperLocations"
+                  value="classpath:com/lwx/mapper/*.xml" />
+    </bean>
+    <!-- 配置扫描器-->
+    <bean id="mapperScanner"
+          class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 扫描com.mfs.dao 这个包以及它的子包下的所有映射接口类-->
+        <property name="basePackage" value="com.mfs.dao" />
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"
+        />
+    </bean>
+</beans>
